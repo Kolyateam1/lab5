@@ -56,9 +56,6 @@ public class City implements Comparable<City>{
         if (trimmed.isEmpty()) {
             throw new IllegalArgumentException("Название города не может быть пустым");
         }
-        if (!trimmed.matches("^[a-zA-Zа-яА-яёЁ0-9\\s\\-.]+$")) {
-            throw new IllegalArgumentException("Это название города содержит недопустимый символ");
-        }
         this.name = trimmed;
     }
     public void setCoordinates(Coordinates coordinates) {
@@ -128,7 +125,31 @@ public class City implements Comparable<City>{
 
     @Override
     public String toString() {
-        return String.format("City[id=%d, name='%s', population=%d, climate=%s",
-        id, name, population, climate);
+        return String.format("City[" +
+                        "  id=%d" +
+                        "  name='%s'" +
+                        "  coordinates=(%s, %s)" +
+                        "  creationDate=%s" +
+                        "  area=%s" +
+                        "  population=%d" +
+                        "  metersAboveSeaLevel=%s" +
+                        "  climate=%s" +
+                        "  government=%s" +
+                        "  standardOfLiving=%s" +
+                        "  governorAge=%d" +
+                        "]",
+                id,
+                name,
+                coordinates.getX(),
+                coordinates.getY(),
+                creationDate,
+                area,
+                population,
+                metersAboveSeaLevel != null ? metersAboveSeaLevel : "null",
+                climate,
+                government,
+                standardOfLiving != null ? standardOfLiving : "null",
+                governor.getAge()
+        );
     }
 }
