@@ -7,7 +7,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 
 import models.City;
 import models.Climate;
@@ -73,6 +75,32 @@ public class FileManager {
         return collection;
     }
 
+    private List<String> parseCsvLine(String line) {
+        List<String> result = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+
+            if (c == '"') {
+                if (inQuotes && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    current.append('"');
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (c == ';' && !inQuotes) {
+                result.add(current.toString());
+                current.setLength(0);
+            } else {
+                current.append(c);
+            }
+        }
+        result.add(current.toString());
+        return result;
+    }
+
     public void writeCollection(LinkedList<City> collection) throws IOException {
         File file = new File(filename);
         
@@ -93,76 +121,79 @@ public class FileManager {
     }
 
     private City parseCity(String line) {
-        String[] parts = line.split(CSV_DELIMITER, -1);
-        
-        if (parts.length < EXPECTED_FIELDS) {
-            throw new IllegalArgumentException("Недостаточно полей");
+        List<String> parts = parseCsvLine(line);
+
+        if (parts.size() < EXPECTED_FIELDS) {
+            throw new IllegalArgumentException("Недостаточно полей.");
+        }
+
+        if (parts.size() > EXPECTED_FIELDS) {
+            throw new IllegalArgumentException("Слишком много полей. ");
         }
 
         try {
             City city = new City();
-            
-            // id пропускаем - генерируется автоматически
-            
+
             // name
-            if (parts[1].isEmpty()) {
+            if (parts.get(1).isEmpty()) {
                 throw new IllegalArgumentException("Пустое имя");
             }
-            city.setName(parts[1]);
-            
+            String name = unescapeCsv(parts.get(1));
+            city.setName(name);
+
             // coordinates
-            if (parts[2].isEmpty() || parts[3].isEmpty()) {
+            if (parts.get(2).isEmpty() || parts.get(3).isEmpty()) {
                 throw new IllegalArgumentException("Пустые координаты");
             }
             Coordinates coords = new Coordinates(
-                Double.parseDouble(parts[2]),
-                Float.parseFloat(parts[3])
+                    Double.parseDouble(parts.get(2)),
+                    Float.parseFloat(parts.get(3))
             );
             city.setCoordinates(coords);
-            
+
             // area
-            if (parts[5].isEmpty()) {
+            if (parts.get(5).isEmpty()) {
                 throw new IllegalArgumentException("Пустая площадь");
             }
-            city.setArea(Double.parseDouble(parts[5]));
-            
+            city.setArea(Double.parseDouble(parts.get(5)));
+
             // population
-            if (parts[6].isEmpty()) {
+            if (parts.get(6).isEmpty()) {
                 throw new IllegalArgumentException("Пустое население");
             }
-            city.setPopulation(Long.parseLong(parts[6]));
-            
+            city.setPopulation(Long.parseLong(parts.get(6)));
+
             // metersAboveSeaLevel
-            if (!parts[7].isEmpty()) {
-                city.setMetersAboveSeaLevel(Long.parseLong(parts[7]));
+            if (!parts.get(7).isEmpty()) {
+                city.setMetersAboveSeaLevel(Long.parseLong(parts.get(7)));
             }
-            
+
             // climate
-            if (parts[8].isEmpty()) {
+            if (parts.get(8).isEmpty()) {
                 throw new IllegalArgumentException("Пустой климат");
             }
-            city.setClimate(Climate.valueOf(parts[8]));
-            
+            city.setClimate(Climate.valueOf(parts.get(8)));
+
             // government
-            if (parts[9].isEmpty()) {
+            if (parts.get(9).isEmpty()) {
                 throw new IllegalArgumentException("Пустое правление");
             }
-            city.setGovernment(Government.valueOf(parts[9]));
-            
+            city.setGovernment(Government.valueOf(parts.get(9)));
+
             // standardOfLiving
-            if (!parts[10].isEmpty()) {
-                city.setStandardOfLiving(StandardOfLiving.valueOf(parts[10]));
+            if (!parts.get(10).isEmpty()) {
+                city.setStandardOfLiving(StandardOfLiving.valueOf(parts.get(10)));
             }
-            
+
             // governor
-            if (parts[11].isEmpty()) {
+            if (parts.get(11).isEmpty()) {
                 throw new IllegalArgumentException("Пустой возраст губернатора");
             }
-            Human governor = new Human(Long.parseLong(parts[11]));
+            Human governor = new Human(Long.parseLong(parts.get(11)));
             city.setGovernor(governor);
-            
+
             return city;
-            
+
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Неверный формат числа: " + e.getMessage());
         } catch (IllegalArgumentException e) {
@@ -170,10 +201,28 @@ public class FileManager {
         }
     }
 
+    private String escapeCsv(String field) {
+        if (field == null) return "";
+        if (field.contains(";") || field.contains("\"") || field.contains("\n") || field.contains("\r")) {
+            String escaped = field.replace("\"", "\"\"");
+            return "\"" + escaped + "\"";
+        }
+        return field;
+    }
+
+    private String unescapeCsv(String field) {
+        if (field == null || field.isEmpty()) return "";
+        if (field.startsWith("\"") && field.endsWith("\"")) {
+            String inner = field.substring(1, field.length() - 1);
+            return inner.replace("\"\"", "\"");
+        }
+        return field;
+    }
+
     private String cityToCSV(City city) {
         return String.join(CSV_DELIMITER,
             String.valueOf(city.getId()),
-            city.getName(),
+                escapeCsv(city.getName()),
             String.valueOf(city.getCoordinates().getX()),
             String.valueOf(city.getCoordinates().getY()),
             city.getCreationDate().toString(),
